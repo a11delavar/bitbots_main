@@ -11,6 +11,8 @@ from sensor_msgs.msg import CameraInfo, Image, Imu, JointState
 
 from bitbots_msgs.msg import FootPressure, JointCommand
 
+# TODO: Study this file and think how we translate it to Mujoco code
+
 CAMERA_DIVIDER = 8  # every nth timestep an image is published, this is n
 
 
