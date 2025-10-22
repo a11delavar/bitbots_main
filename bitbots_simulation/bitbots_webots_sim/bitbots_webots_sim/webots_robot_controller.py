@@ -642,12 +642,12 @@ class RobotController:
                 self.ros_node.get_parameter("camera_optical_frame").get_parameter_value().string_value
             )
             self.head_imu_frame = self.ros_node.get_parameter("head_imu_frame").get_parameter_value().string_value
-            self.pub_js = self.ros_node.create_publisher(JointState, base_ns + "joint_states", 1)
-            self.pub_imu = self.ros_node.create_publisher(Imu, base_ns + "imu/data_raw", 1)
+            self.pub_js = self.ros_node.create_publisher(JointState, base_ns + "joint_states", 1)  #
+            self.pub_imu = self.ros_node.create_publisher(Imu, base_ns + "imu/data_raw", 1)  #
 
             self.pub_imu_head = self.ros_node.create_publisher(Imu, base_ns + "imu_head/data", 1)
-            self.pub_cam = self.ros_node.create_publisher(Image, base_ns + "camera/image_proc", 1)
-            self.pub_cam_info = self.ros_node.create_publisher(CameraInfo, base_ns + "camera/camera_info", 1)
+            self.pub_cam = self.ros_node.create_publisher(Image, base_ns + "camera/image_proc", 1)  #
+            self.pub_cam_info = self.ros_node.create_publisher(CameraInfo, base_ns + "camera/camera_info", 1)  #
 
             self.pub_pres_left = self.ros_node.create_publisher(FootPressure, base_ns + "foot_pressure_left/raw", 1)
             self.pub_pres_right = self.ros_node.create_publisher(FootPressure, base_ns + "foot_pressure_right/raw", 1)
@@ -659,7 +659,9 @@ class RobotController:
             )
             self.cop_l_pub_ = self.ros_node.create_publisher(PointStamped, base_ns + "cop_l", 1)
             self.cop_r_pub_ = self.ros_node.create_publisher(PointStamped, base_ns + "cop_r", 1)
-            self.ros_node.create_subscription(JointCommand, base_ns + "DynamixelController/command", self.command_cb, 1)
+            self.ros_node.create_subscription(
+                JointCommand, base_ns + "DynamixelController/command", self.command_cb, 1
+            )  #
         else:
             self.l_sole_frame = "l_sole"
             self.r_sole_frame = "r_sole"
