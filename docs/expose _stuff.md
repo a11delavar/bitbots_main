@@ -14,6 +14,9 @@
 - Messages auf Topics publishen/subscriben
 - Das für alle schittstellen topics
 
+# Misc
+- Volle Roboerkollision
+
 # Vergleichskriterien
 
 - RTF

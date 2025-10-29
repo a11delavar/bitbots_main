@@ -12,7 +12,6 @@ from sensor_msgs.msg import CameraInfo, Image, Imu, JointState
 from bitbots_msgs.msg import FootPressure, JointCommand
 
 # TODO: Study this file and think how we translate it to Mujoco code
-# https://prod.liveshare.vsengsaas.visualstudio.com/join?AD0D10CB2E625F9A723BD589C46D5585978A
 
 CAMERA_DIVIDER = 8  # every nth timestep an image is published, this is n
 
@@ -586,8 +585,12 @@ class RobotController:
         self.motor_names_to_external_names = {}
         self.external_motor_names_to_motor_names = {}
         for i in range(len(self.proto_motor_names)):
-            self.motor_names_to_external_names[self.proto_motor_names[i]] = self.external_motor_names[i]
-            self.external_motor_names_to_motor_names[self.external_motor_names[i]] = self.proto_motor_names[i]
+            self.motor_names_to_external_names[self.proto_motor_names[i]] = self.external_motor_names[
+                i
+            ]  # webot_name -> ros_name
+            self.external_motor_names_to_motor_names[self.external_motor_names[i]] = self.proto_motor_names[
+                i
+            ]  # ros_name -> webot_name
 
         self.current_positions = {}
         self.joint_limits = {}
@@ -595,7 +598,7 @@ class RobotController:
             motor = self.robot_node.getDevice(motor_name)
             motor.enableTorqueFeedback(self.timestep)
             self.motors.append(motor)
-            self.motors_dict[self.motor_names_to_external_names[motor_name]] = motor
+            self.motors_dict[self.motor_names_to_external_names[motor_name]] = motor  # ros_name -> motor_object
             sensor = self.robot_node.getDevice(motor_name + self.sensor_suffix)
             sensor.enable(self.timestep)
             self.sensors.append(sensor)
@@ -789,11 +792,11 @@ class RobotController:
         js.effort = []
         for joint_name in self.external_motor_names:
             js.name.append(joint_name)
-            value = self.sensors_dict[joint_name].getValue()
+            value = self.sensors_dict[joint_name].getValue()  # new sensor data
             js.position.append(value)
-            js.velocity.append(self.current_positions[joint_name] - value)
+            js.velocity.append(self.current_positions[joint_name] - value)  # old sensor data - new sensor data
             js.effort.append(self.motors_dict[joint_name].getTorqueFeedback())
-            self.current_positions[joint_name] = value
+            self.current_positions[joint_name] = value  # update old sensor data to new sensor data
         return js
 
     def publish_joint_states(self):
