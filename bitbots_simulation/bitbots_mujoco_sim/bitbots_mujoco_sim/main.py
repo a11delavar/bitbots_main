@@ -5,6 +5,7 @@ from typing import Optional
 import mujoco
 import numpy as np
 import rclpy
+from ament_index_python.packages import get_package_share_directory
 from mujoco import viewer
 from rclpy.node import Node
 from rclpy.time import Time
@@ -176,15 +177,15 @@ class Robot:
 class Simulation(Node):
     """Manages the MuJoCo simulation state and its components."""
 
-    def __init__(self, model_path: str):
+    def __init__(self):
         super().__init__("sim_interface")
-        self.model: mujoco.MjModel = mujoco.MjModel.from_xml_path(model_path)
+        package_path = get_package_share_directory("bitbots_mujoco_sim")
+        self.model: mujoco.MjModel = mujoco.MjModel.from_xml_path(package_path + "/xml/adult_field.xml")
         self.data: mujoco.MjData = mujoco.MjData(self.model)
         self.robot: Robot = Robot(self.model, self.data)
         self.controllers = []
         self.time = 0.0
-        self.publishers = {}
-        self.publishers["joint_state"] = self.create_publisher(JointState, "joint_states", 1)
+        self.js_publisher = self.create_publisher(JointState, "joint_states", 1)
 
     def add_controller(self, function) -> None:
         self.controllers.append(function)
@@ -217,7 +218,7 @@ class Simulation(Node):
             )  # TODO: old value - new value (not other way around)
             js.effort.append(self.data.actuator_force[joint.instance.actuator_id])
             # self.current_positions[joint.ros_name] = value # TODO: Somehow the sensor data should be updated here.
-        self.publishers["joint_state"].publish(js)
+        self.js_publisher.publish(js)
 
     def run(
         self,
@@ -238,7 +239,7 @@ def walk_in_place(robot, data) -> None:
 
 def main(args=None):
     rclpy.init(args=args)
-    simulation = Simulation("xml/adult_field.xml")
+    simulation = Simulation()
     simulation.add_controller(walk_in_place)
     simulation.run()
 
