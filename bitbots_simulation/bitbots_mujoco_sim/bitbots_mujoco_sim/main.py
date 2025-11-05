@@ -74,14 +74,6 @@ class Joint:
         """Gets the current joint velocity in rad/s."""
         return self._data.qvel[self._qvel_addr]
 
-    # TODO: How to get sensor associated with this joint?
-    @property
-    def sensor(self) -> Sensor:
-        """Gets the sensor associated with this joint."""
-        # Assuming a sensor with the same name as the joint exists
-        # TODO: NO! there is no sensor with the same name as the joint!
-        return Sensor(self._data.model, self._data, sensor_name=self._data.model.joint(self._joint_id).name)
-
     def set_target(self, target_position: float) -> None:
         """Sets the position target for the joint's actuator."""
         self._data.ctrl[self._actuator_id] = target_position
@@ -211,12 +203,9 @@ class Simulation(Node):
             if joint.instance is None:
                 continue
             js.name.append(joint.ros_name)
-            value = joint.instance.sensor.value
-            js.position.append(value)
-            js.velocity.append(
-                joint.instance.sensor.value - value
-            )  # TODO: old value - new value (not other way around)
-            js.effort.append(self.data.actuator_force[joint.instance.actuator_id])
+            js.position.append(joint.instance.position)
+            js.velocity.append(joint.instance.velocity)  # TODO: old value - new value (not other way around)
+            # js.effort.append(self.data.actuator_force[joint.instance.actuator_id])
             # self.current_positions[joint.ros_name] = value # TODO: Somehow the sensor data should be updated here.
         self.js_publisher.publish(js)
 
