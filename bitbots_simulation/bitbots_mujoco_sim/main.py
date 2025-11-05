@@ -4,8 +4,9 @@ from typing import Optional
 
 import mujoco
 import numpy as np
+import rclpy
 from mujoco import viewer
-from rclpy.node import Node as RclpyNode
+from rclpy.node import Node
 from rclpy.time import Time
 from sensor_msgs.msg import JointState
 
@@ -172,18 +173,18 @@ class Robot:
         raise KeyError(f"Joint with ROS name '{name}' not found.")
 
 
-class Simulation:
+class Simulation(Node):
     """Manages the MuJoCo simulation state and its components."""
 
     def __init__(self, model_path: str):
+        super().__init__("sim_interface")
         self.model: mujoco.MjModel = mujoco.MjModel.from_xml_path(model_path)
         self.data: mujoco.MjData = mujoco.MjData(self.model)
         self.robot: Robot = Robot(self.model, self.data)
         self.controllers = []
         self.time = 0.0
-        self.ros = RclpyNode("robot_controller")
         self.publishers = {}
-        self.publishers["joint_state"] = self.ros.create_publisher(JointState, "joint_states", 1)
+        self.publishers["joint_state"] = self.create_publisher(JointState, "joint_states", 1)
 
     def add_controller(self, function) -> None:
         self.controllers.append(function)
@@ -218,11 +219,15 @@ class Simulation:
             # self.current_positions[joint.ros_name] = value # TODO: Somehow the sensor data should be updated here.
         self.publishers["joint_state"].publish(js)
 
+    def run(
+        self,
+    ) -> None:
+        with viewer.launch_passive(self.model, self.data) as view:
+            while view.is_running():
+                self.step()
+                view.sync()
 
-simulation = Simulation("xml/adult_field.xml")
 
-
-# An example controller function that makes the robot walk in place
 def walk_in_place(robot, data) -> None:
     target_pos = 0.5 * math.sin(2 * data.time)
     robot.get_joint("RHipPitch").set_target(target_pos)
@@ -231,9 +236,17 @@ def walk_in_place(robot, data) -> None:
     robot.get_joint("LKnee").set_target(-target_pos)
 
 
-simulation.add_controller(walk_in_place)
+def main(args=None):
+    rclpy.init(args=args)
+    simulation = Simulation("xml/adult_field.xml")
+    simulation.add_controller(walk_in_place)
+    simulation.run()
 
-with viewer.launch_passive(simulation.model, simulation.data) as view:
-    while view.is_running():
-        simulation.step()
-        view.sync()
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    simulation.destroy_node()
+    rclpy.shutdown()
+
+
+# An example controller function that makes the robot walk in place
