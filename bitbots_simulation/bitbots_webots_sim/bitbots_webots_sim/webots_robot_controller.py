@@ -13,6 +13,8 @@ from bitbots_msgs.msg import FootPressure, JointCommand
 
 # TODO: Study this file and think how we translate it to Mujoco code
 
+# https://prod.liveshare.vsengsaas.visualstudio.com/join?4D77C89754615F96620CA907CD83173AB2EB
+
 CAMERA_DIVIDER = 8  # every nth timestep an image is published, this is n
 
 
