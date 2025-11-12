@@ -3,3 +3,5 @@ rr plotjuggler plotjuggler - topics plotten
 rr bitbots_mujoco_sim sim - run sim
 
 python -m mujoco.viewer --mjcf=xml/adult_field.xml - model
+
+rqt
