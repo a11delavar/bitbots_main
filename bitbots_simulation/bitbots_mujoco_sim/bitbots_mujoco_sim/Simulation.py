@@ -55,12 +55,12 @@ class Simulation(Node):
         js.position = []
         js.effort = []
         for joint in self.robot.joints:
-            if joint.instance is None:
+            if joint is None:
                 continue
             js.name.append(joint.ros_name)
-            js.position.append(joint.instance.position)
-            js.velocity.append(joint.instance.velocity)
-            js.effort.append(self.data.actuator_force[joint.instance.actuator_id])
+            js.position.append(joint.position)
+            js.velocity.append(joint.velocity)
+            js.effort.append(self.data.actuator_force[joint.actuator_id])
         self.js_publisher.publish(js)
 
     def run(

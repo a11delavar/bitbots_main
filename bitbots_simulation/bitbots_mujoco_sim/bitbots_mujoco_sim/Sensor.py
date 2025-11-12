@@ -8,7 +8,7 @@ import numpy as np
 class Sensor:
     """Represents a single sensor, providing a clean interface to its value."""
 
-    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, sensor_name: str):
+    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, name: str, ros_name: str):
         """
         Initializes the Sensor by finding its ID once.
 
@@ -17,19 +17,16 @@ class Sensor:
             data: The dynamic MuJoCo MjData object.
             sensor_name: The name of the sensor in the MJCF model's <sensor> section.
         """
+        self._ros_name: str = ros_name
         self._data: mujoco.MjData = data
-        self._sensor_id: int = model.sensor(sensor_name).id
+        self._sensor_id: int = model.sensor(name).id
 
     @property
     def value(self) -> np.ndarray:
         """Gets the current sensor reading as a NumPy array."""
         return self._data.sensor[self._sensor_id].data
 
-
-@dataclass
-class RobotSensor:
-    """A data class representing a single robot sensor's configuration and instance."""
-
-    name: str
-    ros_name: str
-    instance: Optional[Sensor] = field(default=None, init=False)
+    @property
+    def ros_name(self) -> str:
+        """Gets the ROS name for this sensor."""
+        return self._ros_name

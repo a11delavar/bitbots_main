@@ -12,8 +12,8 @@ class Joint:
         self,
         model: mujoco.MjModel,
         data: mujoco.MjData,
-        joint_name: str,
-        actuator_name: str,
+        name: str,
+        ros_name: str,
     ):
         """
         Initializes the Joint by finding and storing all necessary IDs and addresses once.
@@ -21,15 +21,15 @@ class Joint:
         Args:
             model: The static MuJoCo MjModel object.
             data: The dynamic MuJoCo MjData object.
-            joint_name: The name of the joint in the MJCF model.
-            actuator_name: The name of the corresponding actuator in the MJCF model.
+            name: The name of the joint in the MJCF model.
+            ros_name: The name of the corresponding actuator in the MJCF model.
         """
         self._data: mujoco.MjData = data
-
-        self._joint_id: int = model.joint(joint_name).id
-        self._qpos_addr: int = model.joint(joint_name).qposadr[0]
-        self._qvel_addr: int = model.joint(joint_name).dofadr[0]
-        self._actuator_id: int = model.actuator(actuator_name).id
+        self._joint_id: int = model.joint(name).id
+        self._qpos_addr: int = model.joint(name).qposadr[0]
+        self._qvel_addr: int = model.joint(name).dofadr[0]
+        self._actuator_id: int = model.actuator(name).id
+        self._ros_name: str = ros_name
 
     @property
     def position(self) -> float:
@@ -40,6 +40,11 @@ class Joint:
     def actuator_id(self) -> int:
         """Gets the actuator ID for this joint."""
         return self._actuator_id
+    
+    @property
+    def ros_name(self) -> str:
+        """Gets the ROS name for this joint."""
+        return self._ros_name
 
     @property
     def velocity(self) -> float:
@@ -69,13 +74,3 @@ class Joint:
     def set_velocity(self, target_velocity: float) -> None:
         """Sets the velocity target for the joint's actuator."""
         self._data.ctrl[self._actuator_id] = self.get_max_velocity() if target_velocity == -1 else target_velocity
-
-
-
-@dataclass
-class RobotJoint:
-    """A data class representing a single robot joint's configuration and instance."""
-
-    name: str
-    ros_name: str
-    instance: Optional[Joint] = field(default=None, init=False)
