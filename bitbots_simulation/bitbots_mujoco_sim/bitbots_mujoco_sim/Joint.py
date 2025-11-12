@@ -45,10 +45,31 @@ class Joint:
     def velocity(self) -> float:
         """Gets the current joint velocity in rad/s."""
         return self._data.qvel[self._qvel_addr]
+    
+    def get_min_position(self) -> float:
+        """Gets the minimum position limit for the joint."""
+        return self._data.jnt_range[self._joint_id][0]
 
-    def set_target(self, target_position: float) -> None:
+    def get_max_position(self) -> float:
+        """Gets the maximum position limit for the joint."""
+        return self._data.jnt_range[self._joint_id][1]
+
+    def set_position(self, value: float) -> None:
         """Sets the position target for the joint's actuator."""
-        self._data.ctrl[self._actuator_id] = target_position
+        self._data.ctrl[self._actuator_id] = value
+
+    def get_min_velocity(self) -> float:
+        """Gets the minimum velocity for the joint's actuator."""
+        return self._data.actuator_gainprm[self._actuator_id][0]
+    
+    def get_max_velocity(self) -> float:
+        """Gets the maximum velocity for the joint's actuator."""
+        return self._data.actuator_gainprm[self._actuator_id][1]
+
+    def set_velocity(self, target_velocity: float) -> None:
+        """Sets the velocity target for the joint's actuator."""
+        self._data.ctrl[self._actuator_id] = self.get_max_velocity() if target_velocity == -1 else target_velocity
+
 
 
 @dataclass

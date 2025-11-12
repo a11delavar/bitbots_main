@@ -5,3 +5,5 @@ rr bitbots_mujoco_sim sim - run sim
 python -m mujoco.viewer --mjcf=xml/adult_field.xml - model
 
 rqt
+
+rl bitbots_bringup simulator_teamplayer.launch gamecontroller:=false mujoco:=true - whole sim launcher

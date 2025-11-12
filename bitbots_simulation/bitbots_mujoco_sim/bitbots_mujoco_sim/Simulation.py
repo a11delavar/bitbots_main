@@ -4,6 +4,7 @@ from mujoco import viewer
 from rclpy.node import Node
 from rclpy.time import Time
 from sensor_msgs.msg import JointState
+from bitbots_msgs.msg import JointCommand
 
 from bitbots_mujoco_sim.Robot import Robot
 
@@ -20,9 +21,21 @@ class Simulation(Node):
         self.controllers = []
         self.time = 0.0
         self.js_publisher = self.create_publisher(JointState, "joint_states", 1)
+        self.create_subscription(JointCommand, "DynamixelController/command", self.joint_command_callback, 1)
 
     def add_controller(self, function) -> None:
         self.controllers.append(function)
+
+    def joint_command_callback(self, command: JointCommand) -> None:
+        if len(command.positions) != 0:
+            for i in range(len(command.joint_names)):
+                try:
+                    joint = self.robot.get_joint(command.joint_names[i])
+                    joint.set_position(command.positions[i])
+                    if len(command.velocities) != 0:
+                        joint.set_velocity(command.velocities[i])
+                except ValueError:
+                    print(f"invalid motor specified ({command.joint_names[i]})")
 
     def step(self) -> None:
         mujoco.mj_step(self.model, self.data)
@@ -48,7 +61,6 @@ class Simulation(Node):
             js.position.append(joint.instance.position)
             js.velocity.append(joint.instance.velocity)
             js.effort.append(self.data.actuator_force[joint.instance.actuator_id])
-        print(js)
         self.js_publisher.publish(js)
 
     def run(
