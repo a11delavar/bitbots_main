@@ -1,3 +1,5 @@
+import math
+import time
 import mujoco
 from ament_index_python.packages import get_package_share_directory
 from mujoco import viewer
@@ -20,6 +22,9 @@ class Simulation(Node):
         self.robot: Robot = Robot(self.model, self.data)
         self.controllers = []
         self.time = 0.0
+        self.timestep = self.model.opt.timestep
+        self.step_number = 0
+        self.ros_events_publish_frequency = 3
         self.js_publisher = self.create_publisher(JointState, "joint_states", 1)
         self.create_subscription(JointCommand, "DynamixelController/command", self.joint_command_callback, 1)
 
@@ -38,12 +43,20 @@ class Simulation(Node):
                     print(f"invalid motor specified ({command.joint_names[i]})")
 
     def step(self) -> None:
+        real_start_time = time.time()
+        self.step_number += 1
+        self.time += self.timestep
+
         mujoco.mj_step(self.model, self.data)
-        self.publish_ros_events()
-        # TODO: Update all joints, sensor objects here or what was the plan?
-        # TODO: handle time
+
+        if self.step_number % self.ros_events_publish_frequency == 0:
+            self.publish_ros_events()
+
         for controller in self.controllers:
             controller(self.robot, self.data)
+
+        real_end_time = time.time()
+        time.sleep(max(0.0, self.timestep - (real_end_time - real_start_time)))
 
     def publish_ros_events(self) -> None:
         self.publish_ros_joint_states_event()
