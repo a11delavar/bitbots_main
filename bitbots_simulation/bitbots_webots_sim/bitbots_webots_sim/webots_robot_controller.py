@@ -1,6 +1,9 @@
 import math
 import os
 import time
+from functools import wraps
+from pathlib import Path
+from time import perf_counter
 from typing import Optional
 
 from controller import Robot
@@ -12,6 +15,48 @@ from sensor_msgs.msg import CameraInfo, Image, Imu, JointState
 from bitbots_msgs.msg import FootPressure, JointCommand
 
 CAMERA_DIVIDER = 8  # every nth timestep an image is published, this is n
+
+# Global dictionary to store performance measurements
+_perf_measurements = {}
+_perf_log_file = Path("/tmp/webbots_sim_perf.log")
+
+
+def perf_timer(func):
+    """Decorator to measure and log function execution time."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        t1_start = perf_counter()
+        result = func(*args, **kwargs)
+        t1_stop = perf_counter()
+        elapsed_us = (t1_stop - t1_start) * 1_000_000
+
+        # Store measurement
+        func_name = func.__name__
+        if func_name not in _perf_measurements:
+            _perf_measurements[func_name] = []
+        _perf_measurements[func_name].append(elapsed_us)
+
+        # Calculate average
+        avg_us = sum(_perf_measurements[func_name]) / len(_perf_measurements[func_name])
+        num_calls = len(_perf_measurements[func_name])
+
+        # Write all measurements to file (overwrite)
+        with open(_perf_log_file, "w") as f:
+            f.write("Function Performance Metrics\n")
+            f.write("=" * 80 + "\n\n")
+            for fname, measurements in _perf_measurements.items():
+                avg = sum(measurements) / len(measurements)
+                count = len(measurements)
+                last = measurements[-1]
+                f.write(f"{fname}:\n")
+                f.write(f"  Last: {last:.2f} µs\n")
+                f.write(f"  Avg:  {avg:.2f} µs\n")
+                f.write(f"  Calls: {count}\n\n")
+
+        return result
+
+    return wrapper
 
 
 class RobotController:
@@ -684,11 +729,13 @@ class RobotController:
         self.time += self.timestep / 1000
         self.robot_node.step(self.timestep)
 
+    @perf_timer
     def step(self):
         self.step_sim()
         if self.ros_active:
             self.publish_ros()
 
+    @perf_timer
     def publish_ros(self):
         self.publish_imu()
         self.publish_joint_states()
@@ -734,6 +781,7 @@ class RobotController:
             except ValueError:
                 print(f"invalid motor specified ({joint_names[i]})")
 
+    @perf_timer
     def command_cb(self, command: JointCommand):
         if len(command.positions) != 0:
             # position control
@@ -791,6 +839,7 @@ class RobotController:
             self.current_positions[joint_name] = value
         return js
 
+    @perf_timer
     def publish_joint_states(self):
         self.pub_js.publish(self.get_joint_state_msg())
 
@@ -834,11 +883,13 @@ class RobotController:
                 msg.angular_velocity.z = 0.0
         return msg
 
+    @perf_timer
     def publish_imu(self):
         self.pub_imu.publish(self.get_imu_msg(head=False))
         if self.is_wolfgang:
             self.pub_imu_head.publish(self.get_imu_msg(head=True))
 
+    @perf_timer
     def publish_camera(self):
         img_msg = Image()
         img_msg.header.stamp = Time(seconds=int(self.time), nanoseconds=int(self.time % 1 * 1e9)).to_msg()
@@ -913,6 +964,7 @@ class RobotController:
             f.write(annotation)
         self.camera.saveImage(filename=os.path.join(self.img_save_dir, img_name), quality=100)
 
+    @perf_timer
     def get_image(self):
         return self.camera.getImage()
 

@@ -1,5 +1,8 @@
 import math
 import time
+from functools import wraps
+from pathlib import Path
+from time import perf_counter
 
 import mujoco
 from ament_index_python.packages import get_package_share_directory
@@ -11,6 +14,48 @@ from sensor_msgs.msg import CameraInfo, Image, Imu, JointState
 
 from bitbots_msgs.msg import JointCommand
 from bitbots_mujoco_sim.robot import Robot
+
+# Global dictionary to store performance measurements
+_perf_measurements = {}
+_perf_log_file = Path("/tmp/mujoco_sim_perf.log")
+
+
+def perf_timer(func):
+    """Decorator to measure and log function execution time."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        t1_start = perf_counter()
+        result = func(*args, **kwargs)
+        t1_stop = perf_counter()
+        elapsed_us = (t1_stop - t1_start) * 1_000_000
+
+        # Store measurement
+        func_name = func.__name__
+        if func_name not in _perf_measurements:
+            _perf_measurements[func_name] = []
+        _perf_measurements[func_name].append(elapsed_us)
+
+        # Calculate average
+        avg_us = sum(_perf_measurements[func_name]) / len(_perf_measurements[func_name])
+        num_calls = len(_perf_measurements[func_name])
+
+        # Write all measurements to file (overwrite)
+        with open(_perf_log_file, "w") as f:
+            f.write("Function Performance Metrics\n")
+            f.write("=" * 80 + "\n\n")
+            for fname, measurements in _perf_measurements.items():
+                avg = sum(measurements) / len(measurements)
+                count = len(measurements)
+                last = measurements[-1]
+                f.write(f"{fname}:\n")
+                f.write(f"  Last: {last:.2f} µs\n")
+                f.write(f"  Avg:  {avg:.2f} µs\n")
+                f.write(f"  Calls: {count}\n\n")
+
+        return result
+
+    return wrapper
 
 
 class Simulation(Node):
@@ -54,6 +99,7 @@ class Simulation(Node):
                 self.step()
                 view.sync()
 
+    @perf_timer
     def joint_command_callback(self, command: JointCommand) -> None:
         if len(command.positions) != 0:
             for i in range(len(command.joint_names)):
@@ -62,6 +108,7 @@ class Simulation(Node):
                 # if len(command.velocities) != 0:
                 #    joint.velocity = command.velocities[i]
 
+    @perf_timer
     def step(self) -> None:
         real_start_time = time.time()
         self.step_number += 1
@@ -77,11 +124,13 @@ class Simulation(Node):
         real_end_time = time.time()
         time.sleep(max(0.0, self.timestep - (real_end_time - real_start_time)))
 
+    @perf_timer
     def publish_clock_event(self) -> None:
         clock_msg = Clock()
         clock_msg.clock = self.time_message
         self.clock_publisher.publish(clock_msg)
 
+    @perf_timer
     def publish_ros_joint_states_event(self) -> None:
         js = JointState()
         js.name = []
@@ -94,6 +143,7 @@ class Simulation(Node):
             js.velocity.append(joint.velocity)
             js.effort.append(joint.effort)
         self.js_publisher.publish(js)
+    @perf_timer
 
     def publish_imu_event(self) -> None:
         imu = Imu()
@@ -112,6 +162,7 @@ class Simulation(Node):
 
         self.imu_publisher.publish(imu)
 
+    @perf_timer
     def publish_camera_event(self) -> None:
         if not self.camera_active:
             return

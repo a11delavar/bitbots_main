@@ -1,3 +1,6 @@
+from functools import wraps
+from pathlib import Path
+from time import perf_counter
 from typing import Optional
 
 import numpy as np
@@ -13,6 +16,48 @@ from std_srvs.srv import Empty
 from bitbots_msgs.srv import SetObjectPose, SetObjectPosition, SimulatorPush
 
 G = 9.81
+
+
+_perf_measurements = {}
+_perf_log_file = Path("/tmp/webots_sim_perf.log")
+
+
+def perf_timer(func):
+    """Decorator to measure and log function execution time."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        t1_start = perf_counter()
+        result = func(*args, **kwargs)
+        t1_stop = perf_counter()
+        elapsed_us = (t1_stop - t1_start) * 1_000_000
+
+        # Store measurement
+        func_name = func.__name__
+        if func_name not in _perf_measurements:
+            _perf_measurements[func_name] = []
+        _perf_measurements[func_name].append(elapsed_us)
+
+        # Calculate average
+        avg_us = sum(_perf_measurements[func_name]) / len(_perf_measurements[func_name])
+        num_calls = len(_perf_measurements[func_name])
+
+        # Write all measurements to file (overwrite)
+        with open(_perf_log_file, "w") as f:
+            f.write("Function Performance Metrics\n")
+            f.write("=" * 80 + "\n\n")
+            for fname, measurements in _perf_measurements.items():
+                avg = sum(measurements) / len(measurements)
+                count = len(measurements)
+                last = measurements[-1]
+                f.write(f"{fname}:\n")
+                f.write(f"  Last: {last:.2f} µs\n")
+                f.write(f"  Avg:  {avg:.2f} µs\n")
+                f.write(f"  Calls: {count}\n\n")
+
+        return result
+
+    return wrapper
 
 
 class SupervisorController:
@@ -168,6 +213,7 @@ class SupervisorController:
         self.time += self.timestep / 1000.0
         self.supervisor.step(self.timestep)
 
+    @perf_timer
     def step(self):
         self.step_sim()
         if self.ros_active:
