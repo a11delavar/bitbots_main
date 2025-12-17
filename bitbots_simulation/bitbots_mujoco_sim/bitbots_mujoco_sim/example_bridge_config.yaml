@@ -6,7 +6,7 @@ to_domain: 1
 topics:
   clock:
     type: clock
-  joint_states:
+  robot1/joint_states:
     type: joint_states
   imu:
     type: imu/data_raw

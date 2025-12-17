@@ -51,16 +51,6 @@ class Simulation(Node):
             "foot_center_of_pressure_right": self.create_publisher(PointStamped, "cop_r", 1),
         }
 
-        self.js_publisher = self.node_publishers["joint_states"]
-        self.clock_publisher = self.node_publishers["clock"]
-        self.imu_publisher = self.node_publishers["imu"]
-        self.camera_publisher = self.node_publishers["camera_proc"]
-        self.camera_info_publisher = self.node_publishers["camera_info"]
-        self.pressure_left_publisher = self.node_publishers["foot_pressure_left"]
-        self.pressure_right_publisher = self.node_publishers["foot_pressure_right"]
-        self.center_of_pressure_left_publisher = self.node_publishers["foot_center_of_pressure_left"]
-        self.center_of_pressure_right_publisher = self.node_publishers["foot_center_of_pressure_right"]
-
         self.events = {
             "clock": {"frequency": 1, "handler": self.publish_clock_event},
             "joint_states": {"frequency": 3, "handler": self.publish_ros_joint_states_event},
@@ -117,7 +107,7 @@ class Simulation(Node):
     def publish_clock_event(self) -> None:
         clock_msg = Clock()
         clock_msg.clock = self.time_message
-        self.clock_publisher.publish(clock_msg)
+        self.node_publishers["clock"].publish(clock_msg)
 
     def publish_ros_joint_states_event(self) -> None:
         js = JointState()
@@ -130,7 +120,7 @@ class Simulation(Node):
             js.position.append(joint.position)
             js.velocity.append(joint.velocity)
             js.effort.append(joint.effort)
-        self.js_publisher.publish(js)
+        self.node_publishers["joint_states"].publish(js)
 
     def publish_imu_event(self) -> None:
         imu = Imu()
@@ -147,7 +137,7 @@ class Simulation(Node):
 
         imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z = self.robot.sensors.gyro.data
 
-        self.imu_publisher.publish(imu)
+        self.node_publishers["imu"].publish(imu)
 
     def publish_camera_event(self) -> None:
         if not self.camera_active:
@@ -161,7 +151,7 @@ class Simulation(Node):
         img.width = self.robot.camera.width
         img.step = 4 * self.robot.camera.width
         img.data = self.robot.camera.render()
-        self.camera_publisher.publish(img)
+        self.node_publishers["camera_proc"].publish(img)
 
         cam_info = CameraInfo()
         cam_info.header = img.header
@@ -188,7 +178,7 @@ class Simulation(Node):
         cam_info.k = [f_x, 0.0, cx, 0.0, f_y, cy, 0.0, 0.0, 1.0]
         cam_info.p = [f_x, 0.0, cx, 0.0, 0.0, f_y, cy, 0.0, 0.0, 0.0, 1.0, 0.0]
 
-        self.camera_info_publisher.publish(cam_info)
+        self.node_publishers["camera_info"].publish(cam_info)
 
     def publish_pressure_events(self) -> None:
         left = FootPressure()
@@ -196,29 +186,27 @@ class Simulation(Node):
         left.left_back, left.left_front, left.right_front, left.right_back = [
             sensor.force for sensor in self.robot.feet_sensors.left
         ]
-        self.pressure_left_publisher.publish(left)
+        self.node_publishers["foot_pressure_left"].publish(left)
 
         right = FootPressure()
         right.header.stamp = self.time_message
         right.left_back, right.left_front, right.right_front, right.right_back = [
             sensor.force for sensor in self.robot.feet_sensors.right
         ]
-        self.pressure_right_publisher.publish(right)
+        self.node_publishers["foot_pressure_right"].publish(right)
 
     def publish_center_of_pressure_events(self) -> None:
         left = PointStamped()
         left.header.frame_id = "l_foot_frame"
         left.header.stamp = self.time_message
         left.point.x, left.point.y = self.robot.feet_sensors.left.center_of_pressure
-        self.center_of_pressure_left_publisher.publish(left)
+        self.node_publishers["foot_center_of_pressure_left"].publish(left)
 
         right = PointStamped()
         right.header.frame_id = "r_foot_frame"
         right.header.stamp = self.time_message
         right.point.x, right.point.y = self.robot.feet_sensors.right.center_of_pressure
-        print("cop" + str(self.robot.feet_sensors.right.center_of_pressure))
-        print("right " + str(right.point.x), right.point.y)
-        self.center_of_pressure_right_publisher.publish(right)
+        self.node_publishers["foot_center_of_pressure_right"].publish(right)
 
     def publish(self, domain_id: int, executor: callable) -> None:
         for robot in self.robots:
