@@ -29,7 +29,7 @@ class Simulation(Node):
         self.time_message = Time(seconds=0, nanoseconds=0).to_msg()
         self.timestep = self.model.opt.timestep
         self.step_number = 0
-        self.real_time_factor = 1.0
+        self.real_time_factor = 2.0
 
         self.create_subscription(JointCommand, "DynamixelController/command", self.joint_command_callback, 1)
         self.create_subscription(Float32, "real_time_factor", self.real_time_factor_callback, 1)
@@ -45,8 +45,8 @@ class Simulation(Node):
             "imu": self.create_publisher(Imu, "imu/data_raw", 1),
             "camera_proc": self.create_publisher(Image, "camera/image_proc", 1),
             "camera_info": self.create_publisher(CameraInfo, "camera/camera_info", 1),
-            "foot_pressure_left": self.create_publisher(FootPressure, "foot_pressure_left/raw", 1),
-            "foot_pressure_right": self.create_publisher(FootPressure, "foot_pressure_right/raw", 1),
+            "foot_pressure_left": self.create_publisher(FootPressure, "foot_pressure_left/filtered", 1),
+            "foot_pressure_right": self.create_publisher(FootPressure, "foot_pressure_right/filtered", 1),
             "foot_center_of_pressure_left": self.create_publisher(PointStamped, "cop_l", 1),
             "foot_center_of_pressure_right": self.create_publisher(PointStamped, "cop_r", 1),
         }
@@ -194,14 +194,14 @@ class Simulation(Node):
         left = FootPressure()
         left.header.stamp = self.time_message
         left.left_back, left.left_front, left.right_front, left.right_back = [
-            sensor.force for sensor in self.robot.feet_sensors.left
+            -sensor.force for sensor in self.robot.feet_sensors.left
         ]
         self.pressure_left_publisher.publish(left)
 
         right = FootPressure()
         right.header.stamp = self.time_message
         right.left_back, right.left_front, right.right_front, right.right_back = [
-            sensor.force for sensor in self.robot.feet_sensors.right
+            -sensor.force for sensor in self.robot.feet_sensors.right
         ]
         self.pressure_right_publisher.publish(right)
 
