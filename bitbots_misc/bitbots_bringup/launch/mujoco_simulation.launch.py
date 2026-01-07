@@ -14,7 +14,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Start the MuJoCo simulation node (domain 0)
+            # Start the MuJoCo simulation node (domain 63)
             Node(
                 package="bitbots_mujoco_sim",
                 executable="sim",
