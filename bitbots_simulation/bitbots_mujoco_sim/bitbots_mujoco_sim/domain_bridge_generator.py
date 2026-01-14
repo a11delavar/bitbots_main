@@ -71,5 +71,3 @@ class DomainBridgeConfigGenerator:
             }
 
         return config
-
-        return config

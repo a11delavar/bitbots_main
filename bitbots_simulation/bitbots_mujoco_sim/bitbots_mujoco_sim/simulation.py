@@ -1,5 +1,6 @@
 import math
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 import mujoco
@@ -31,9 +32,6 @@ class Simulation(Node):
         self.robots: list[RobotSimulation] = [
             RobotSimulation(self, Robot(self.model, self.data, idx), idx + 1) for idx in self._find_robot_indices()
         ]
-
-        # Generate domain bridge config for all robots
-        from pathlib import Path
 
         bridge_gen = DomainBridgeConfigGenerator(self.robots)
         config_dir = Path(self.package_path) / "config" / "domain_bridges"

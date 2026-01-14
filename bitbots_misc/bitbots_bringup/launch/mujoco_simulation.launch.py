@@ -14,7 +14,6 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Start the MuJoCo simulation node (domain 63)
             Node(
                 package="bitbots_mujoco_sim",
                 executable="sim",
@@ -22,9 +21,8 @@ def generate_launch_description():
                 output="screen",
                 emulate_tty=True,
             ),
-            # Wait for simulation to generate config, then start domain bridge
             TimerAction(
-                period=2.0,  # Wait 2 seconds for sim to generate config
+                period=2.0,
                 actions=[
                     LogInfo(msg=f"Starting domain bridge with config: {bridge_config}"),
                     Node(
