@@ -43,7 +43,6 @@ class Simulation(Node):
         self.timestep = self.model.opt.timestep
         self.step_number = 0
         self.real_time_factor = 1.0
-
         self.clock_publisher = self.create_publisher(Clock, "clock", 1)
         self.create_subscription(Float32, "real_time_factor", self.real_time_factor_callback, 1)
 
@@ -54,11 +53,11 @@ class Simulation(Node):
 
         self.events = [
             {"frequency": 1, "handler": self.publish_clock_event},
-            {"frequency": 3, "handler": lambda: self.publish(lambda robot: robot.publish_ros_joint_states_event())},
-            {"frequency": 3, "handler": lambda: self.publish(lambda robot: robot.publish_imu_event())},
-            {"frequency": 24, "handler": lambda: self.publish(lambda robot: robot.publish_camera_event())},
-            {"frequency": 3, "handler": lambda: self.publish(lambda robot: robot.publish_pressure_events())},
-            {"frequency": 3, "handler": lambda: self.publish(lambda robot: robot.publish_center_of_pressure_events())},
+            {"frequency": 4, "handler": lambda: self.publish(lambda robot: robot.publish_ros_joint_states_event())},
+            {"frequency": 4, "handler": lambda: self.publish(lambda robot: robot.publish_imu_event())},
+            {"frequency": 4, "handler": lambda: self.publish(lambda robot: robot.publish_pressure_events())},
+            {"frequency": 4, "handler": lambda: self.publish(lambda robot: robot.publish_center_of_pressure_events())},
+            {"frequency": 32, "handler": lambda: self.publish(lambda robot: robot.publish_camera_event())},
         ]
 
     def _find_robot_indices(self) -> list[int]:
@@ -123,8 +122,12 @@ class RobotSimulation:
             "imu": self.simulation.create_publisher(Imu, _topic("imu/data_raw"), 1),
             "camera_proc": self.simulation.create_publisher(Image, _topic("camera/image_proc"), 1),
             "camera_info": self.simulation.create_publisher(CameraInfo, _topic("camera/camera_info"), 1),
-            "foot_pressure_left": self.simulation.create_publisher(FootPressure, _topic("foot_pressure_left/raw"), 1),
-            "foot_pressure_right": self.simulation.create_publisher(FootPressure, _topic("foot_pressure_right/raw"), 1),
+            "foot_pressure_left": self.simulation.create_publisher(
+                FootPressure, _topic("foot_pressure_left/filtered"), 1
+            ),
+            "foot_pressure_right": self.simulation.create_publisher(
+                FootPressure, _topic("foot_pressure_right/filtered"), 1
+            ),
             "foot_center_of_pressure_left": self.simulation.create_publisher(
                 PointStamped, _topic("foot_center_of_pressure_left"), 1
             ),
@@ -219,14 +222,14 @@ class RobotSimulation:
         left = FootPressure()
         left.header.stamp = self.simulation.time_message
         left.left_back, left.left_front, left.right_front, left.right_back = [
-            sensor.force for sensor in self.robot.feet_sensors.left
+            -sensor.force for sensor in self.robot.feet_sensors.left
         ]
         self.node_publishers["foot_pressure_left"].publish(left)
 
         right = FootPressure()
         right.header.stamp = self.simulation.time_message
         right.left_back, right.left_front, right.right_front, right.right_back = [
-            sensor.force for sensor in self.robot.feet_sensors.right
+            -sensor.force for sensor in self.robot.feet_sensors.right
         ]
         self.node_publishers["foot_pressure_right"].publish(right)
 
