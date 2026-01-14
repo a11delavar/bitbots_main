@@ -30,7 +30,7 @@ class Simulation(Node):
         self.time_message = Time(seconds=0, nanoseconds=0).to_msg()
         self.timestep = self.model.opt.timestep
         self.step_number = 0
-        self.real_time_factor = 2.0
+        self.real_time_factor = 1.0
         self.clock_publisher = self.create_publisher(Clock, "clock", 1)
         self.create_subscription(Float32, "real_time_factor", self.real_time_factor_callback, 1)
 
