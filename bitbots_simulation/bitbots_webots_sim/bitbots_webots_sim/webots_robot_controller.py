@@ -3,6 +3,7 @@ import os
 import time
 from typing import Optional
 
+from bitbots_utils.perf_timer import set_sim_time, timed
 from controller import Robot
 from geometry_msgs.msg import PointStamped
 from rclpy.node import Node as RclpyNode
@@ -680,10 +681,15 @@ class RobotController:
     def h_fov_to_v_fov(self, h_fov, height, width):
         return 2 * math.atan(math.tan(h_fov * 0.5) * (height / width))
 
+    @timed
     def step_sim(self):
         self.time += self.timestep / 1000
         self.robot_node.step(self.timestep)
 
+        # Update perf_timer with current simulation time
+        set_sim_time(self.time)
+
+    @timed
     def step(self):
         self.step_sim()
         if self.ros_active:
@@ -734,6 +740,7 @@ class RobotController:
             except ValueError:
                 print(f"invalid motor specified ({joint_names[i]})")
 
+    @timed
     def command_cb(self, command: JointCommand):
         if len(command.positions) != 0:
             # position control
@@ -791,6 +798,7 @@ class RobotController:
             self.current_positions[joint_name] = value
         return js
 
+    @timed
     def publish_joint_states(self):
         self.pub_js.publish(self.get_joint_state_msg())
 
@@ -834,11 +842,13 @@ class RobotController:
                 msg.angular_velocity.z = 0.0
         return msg
 
+    @timed
     def publish_imu(self):
         self.pub_imu.publish(self.get_imu_msg(head=False))
         if self.is_wolfgang:
             self.pub_imu_head.publish(self.get_imu_msg(head=True))
 
+    @timed
     def publish_camera(self):
         img_msg = Image()
         img_msg.header.stamp = Time(seconds=int(self.time), nanoseconds=int(self.time % 1 * 1e9)).to_msg()
@@ -1016,6 +1026,7 @@ class RobotController:
 
         return left_pressure, right_pressure, cop_l, cop_r
 
+    @timed
     def publish_pressure(self):
         left, right, cop_l, cop_r = self.get_pressure_message()
         self.pub_pres_left.publish(left)

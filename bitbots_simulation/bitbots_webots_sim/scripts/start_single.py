@@ -4,6 +4,7 @@ import os
 import threading
 
 import rclpy
+from bitbots_utils.perf_timer import configure_output
 from bitbots_webots_sim.webots_robot_controller import RobotController
 from controller import Robot
 from rclpy.experimental.events_executor import EventsExecutor
@@ -57,6 +58,7 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
 
     rclpy.init()
+    configure_output("/tmp/webots_perf", "Webots")
     robot = RobotNode(
         args.sim_port, args.robot_name, args.void_controller, args.disable_camera, args.recognize, args.robot_type
     )

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Callable
 
 import mujoco
 from ament_index_python.packages import get_package_share_directory
+from bitbots_utils.perf_timer import set_sim_time, timed
 from geometry_msgs.msg import PointStamped
 from mujoco import viewer
 from rclpy.node import Node
@@ -73,6 +74,7 @@ class Simulation(Node):
                 self.step()
                 view.sync()
 
+    @timed
     def step(self) -> None:
         real_start_time = time.time()
         self.step_number += 1
@@ -89,9 +91,13 @@ class Simulation(Node):
         expected_step_time = self.timestep / self.real_time_factor
         time.sleep(max(0.0, expected_step_time - (real_end_time - real_start_time)))
 
+        # Update perf_timer with current simulation time
+        set_sim_time(self.time)
+
     def real_time_factor_callback(self, msg: Float32) -> None:
         self.real_time_factor = msg.data
 
+    @timed
     def publish_clock_event(self) -> None:
         clock_msg = Clock()
         clock_msg.clock = self.time_message
@@ -145,12 +151,14 @@ class RobotSimulation:
     def namespace(self) -> str:
         return self.robot.namespace
 
+    @timed
     def joint_command_callback(self, command: JointCommand) -> None:
         if len(command.positions) != 0:
             for i in range(len(command.joint_names)):
                 joint = self.robot.joints.get(command.joint_names[i])
                 joint.position = command.positions[i]
 
+    @timed
     def publish_ros_joint_states_event(self) -> None:
         js = JointState()
         js.name = []
@@ -165,6 +173,7 @@ class RobotSimulation:
             js.effort.append(joint.effort)
         self.node_publishers["joint_states"].publish(js)
 
+    @timed
     def publish_imu_event(self) -> None:
         imu = Imu()
         imu.header.stamp = self.simulation.time_message
@@ -184,6 +193,7 @@ class RobotSimulation:
         imu.orientation.w, imu.orientation.x, imu.orientation.y, imu.orientation.z = self.robot.sensors.orientation.data
         self.node_publishers["imu"].publish(imu)
 
+    @timed
     def publish_camera_event(self) -> None:
         if not self.simulation.camera_active:
             return
@@ -225,6 +235,7 @@ class RobotSimulation:
 
         self.node_publishers["camera_info"].publish(cam_info)
 
+    @timed
     def publish_pressure_events(self) -> None:
         left = FootPressure()
         left.header.stamp = self.simulation.time_message
@@ -240,6 +251,7 @@ class RobotSimulation:
         ]
         self.node_publishers["foot_pressure_right"].publish(right)
 
+    @timed
     def publish_center_of_pressure_events(self) -> None:
         left = PointStamped()
         left.header.frame_id = "l_foot_frame"
